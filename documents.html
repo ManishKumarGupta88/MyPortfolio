@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Documents · Manish Kumar Gupta</title>
+  <style>
+    :root{--bg:#071022;--panel:#071826;--text:#cfeefb;--brand:#00ffea;--brand-2:#8bff7a;--card:rgba(2,8,14,.6)}
+    :root.light{--bg:#f6fbff;--panel:#ffffff;--text:#062635;--brand:#0369a1;--brand-2:#06b6d4;--card:#fbfdff}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text)}
+    .container{width:min(1000px,92vw);margin:28px auto}
+  header{position:sticky;top:0;z-index:40;padding:12px 0;background:linear-gradient(180deg,color-mix(in oklab,var(--bg) 86%, transparent), transparent)}
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800}
+  .logo-mark{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:#001; font-weight:900;background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 6px 24px -14px var(--ring)}
+  nav.primary{display:flex;gap:8px;align-items:center}
+  nav.primary a{padding:8px 10px;border-radius:10px;color:var(--text);text-decoration:none}
+  nav.primary a:hover{background:color-mix(in oklab,var(--panel) 78%, transparent);box-shadow:0 6px 18px -14px var(--ring)}
+  .theme-btn{border-radius:10px;padding:8px 10px;background:transparent;border:1px solid color-mix(in oklab,var(--text) 8%, transparent);cursor:pointer}
+
+  /* neon code overlay */
+  .code-overlay{position:fixed;right:12px;top:100px;opacity:.06;font-family:ui-monospace,monospace;white-space:pre;pointer-events:none;z-index:5}
+  .code-overlay span{display:block;animation:blink 4s linear infinite}
+  @keyframes blink{0%{opacity:.08;transform:translateY(0)}50%{opacity:.02;transform:translateY(-6px)}100%{opacity:.08;transform:translateY(0)}}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .btn{background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);border:1px solid rgba(255,255,255,.06);padding:10px 12px;border-radius:10px;color:var(--text);text-decoration:none}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);padding:18px;border-radius:12px;margin-top:18px;border:1px solid rgba(255,255,255,.04)}
+    .viewer{display:grid;grid-template-columns:1fr 260px;gap:18px}
+    .main-view{background:#08121a;border-radius:10px;padding:12px;display:grid;place-items:center}
+    .main-view img, .main-view iframe{max-width:100%;max-height:70vh;border-radius:6px}
+    .thumbs{overflow:auto;padding:8px;display:flex;flex-direction:column;gap:8px}
+    .thumb{height:120px;border-radius:8px;overflow:hidden;cursor:pointer;border:2px solid transparent}
+    .thumb.active{border-color:var(--brand)}
+    .controls{display:flex;gap:8px;align-items:center}
+    .upload{display:flex;gap:8px;align-items:center}
+    input[type=file]{display:none}
+    .empty{color:#9ca3af}
+    @media(max-width:880px){.viewer{grid-template-columns:1fr;}.thumbs{flex-direction:row;overflow:auto}}
+    #matrix{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.12}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top">
+      <h1>Documents</h1>
+      <div style="display:flex;gap:8px;align-items:center">
+        <a class="btn" href="index.html">← Back</a>
+        <div style="color:#9ca3af;font-size:13px">(Documents)</div>
+      </div>
+    </div>
+
+    <div class="card viewer" id="viewer">
+      <div class="main-view" id="mainView">
+        <div class="empty" id="emptyMsg">No documents uploaded — upload images or PDFs to preview here.</div>
+      </div>
+      <aside class="thumbs card" id="thumbs" aria-label="Document thumbnails">
+        <!-- thumbnails appended here -->
+      </aside>
+    </div>
+
+    <div class="card" style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+      <div class="controls">
+        <button class="btn" id="prevBtn">◀ Prev</button>
+        <button class="btn" id="nextBtn">Next ▶</button>
+      </div>
+      <div class="badge" id="counter">0 / 0</div>
+    </div>
+  </div>
+
+    <script>
+    // files shown in the viewer: { file: {name}, url, type }
+    const files = [];
+    const thumbs = document.getElementById('thumbs');
+    const mainView = document.getElementById('mainView');
+    const emptyMsg = document.getElementById('emptyMsg');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const counter = document.getElementById('counter');
+    let idx = -1;
+
+    // Add your documents here manually. Paths are relative to this HTML file.
+    const manualFiles = [
+      { name: "MANISH's Resume", url: "MANISH's Resume (1).pdf", type: 'pdf' },
+      { name: "DMC's", url: "DMC's Manish Upto 4th sem.pdf", type: 'pdf' },
+    ];
+
+    function updateCounter(){ counter.textContent = files.length ? `${idx+1} / ${files.length}` : '0 / 0'; }
+
+    function renderMain(){
+      mainView.innerHTML = '';
+      if(files.length === 0){ emptyMsg.style.display = 'block'; updateCounter(); return }
+      emptyMsg.style.display = 'none';
+      const f = files[idx];
+      if(!f) return;
+      if(f.type === 'pdf'){
+        const iframe = document.createElement('iframe');
+        iframe.src = f.url; iframe.style.width = '100%'; iframe.style.height = '70vh'; iframe.setAttribute('title','Document preview');
+        mainView.appendChild(iframe);
+      }else{
+        const img = document.createElement('img'); img.src = f.url; img.alt = f.file ? f.file.name : '' ; mainView.appendChild(img);
+      }
+      updateActiveThumb(); updateCounter();
+    }
+
+    function updateActiveThumb(){
+      Array.from(thumbs.children).forEach((el,i)=> el.classList.toggle('active', i===idx));
+    }
+
+    function addManualEntry(entry){
+      const {name, url, type} = entry;
+      files.push({ file: {name}, url, type });
+      const d = document.createElement('div'); d.className = 'thumb';
+      if(type === 'pdf'){
+        d.innerHTML = `<object data="${url}" type="application/pdf" width="100%" height="100%">PDF</object>`;
+      }else{
+        const img = document.createElement('img'); img.src = url; img.alt = name; img.style.height='100%'; img.style.width='100%'; img.style.objectFit='cover'; d.appendChild(img);
+      }
+      const i = thumbs.children.length;
+      d.addEventListener('click', ()=>{ idx = i; renderMain(); });
+      thumbs.appendChild(d);
+      if(idx === -1) idx = 0;
+      renderMain();
+    }
+
+    function loadManual(){ manualFiles.forEach(addManualEntry); }
+
+    prevBtn.addEventListener('click', ()=>{
+      if(files.length === 0) return;
+      idx = (idx - 1 + files.length) % files.length; renderMain();
+    });
+    nextBtn.addEventListener('click', ()=>{
+      if(files.length === 0) return;
+      idx = (idx + 1) % files.length; renderMain();
+    });
+
+    // initialize viewer with manual list
+    loadManual();
+    </script>
+</body>
+</html>
